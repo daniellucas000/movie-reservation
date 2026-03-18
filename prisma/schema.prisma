@@ -8,3 +8,101 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role     @default(USER)
+  created_at DateTime @default(now())
+
+  reservations Reservation[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Movie {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  poster_url  String
+  genre       Genre    @relation(fields: [genre_id], references: [id])
+  genre_id    String
+  created_at  DateTime @default(now())
+
+  show_times ShowTime[]
+}
+
+model Genre {
+  id   String @id @default(uuid())
+  name String @unique
+
+  movies Movie[]
+}
+
+model ShowTime {
+  id         String   @id @default(uuid())
+  movie      Movie    @relation(fields: [movie_id], references: [id])
+  movie_id   String
+  room       Room     @relation(fields: [room_id], references: [id])
+  room_id    String
+  start_time DateTime
+  end_time   DateTime
+  price      Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+
+  reservations Reservation[]
+}
+
+model Room {
+  id       String @id @default(uuid())
+  name     String @unique
+  capacity Int
+
+  seats      Seat[]
+  show_times ShowTime[]
+}
+
+model Seat {
+  id      String @id @default(uuid())
+  room    Room   @relation(fields: [room_id], references: [id])
+  room_id String
+  row     String
+  number  Int
+
+  reservationSeats ReservationSeat[]
+
+  @@unique([room_id, row, number])
+}
+
+model Reservation {
+  id           String            @id @default(uuid())
+  user         User              @relation(fields: [user_id], references: [id])
+  user_id      String
+  show_time    ShowTime          @relation(fields: [show_time_id], references: [id])
+  show_time_id String
+  status       ReservationStatus @default(CONFIRMED)
+  total_price  Decimal           @db.Decimal(10, 2)
+  created_at   DateTime          @default(now())
+
+  seats ReservationSeat[]
+}
+
+model ReservationSeat {
+  id             String      @id @default(uuid())
+  reservation    Reservation @relation(fields: [reservation_id], references: [id])
+  reservation_id String
+  seat           Seat        @relation(fields: [seat_id], references: [id])
+  seat_id        String
+
+  @@unique([seat_id, reservation_id])
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+}
